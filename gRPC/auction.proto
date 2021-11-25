@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option go_package = "./gRPC";
+
+package gRPC;
+
+service AuctionService {
+    rpc Bid (BidRequest) returns (BidResponse);
+    rpc Result (ResultRequest) returns (ResultResponse);
+}
+
+message BidRequest {
+    string name = 1;
+    int64 bid = 2;
+    int32 timeStamp = 3;
+}
+
+message BidResponse {
+    string name = 1;
+    int64 bid = 2;
+    int32 timeStamp = 3;
+    string status = 4; //Using string because we have 3 outcomes?
+}
+
+message ResultResponse {
+    string name = 1;
+    int64 bid = 2;
+    int32 timeStamp = 3;
+    bool status = 4;
+}
+
+message ResultRequest {
+    int32 timeStamp = 1;
+}
