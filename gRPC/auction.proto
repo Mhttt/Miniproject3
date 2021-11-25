@@ -12,23 +12,27 @@ service AuctionService {
 message BidRequest {
     string name = 1;
     int64 bid = 2;
-    int32 timeStamp = 3;
+    int64 timeStamp = 3;
 }
 
 message BidResponse {
     string name = 1;
     int64 bid = 2;
-    int32 timeStamp = 3;
-    string status = 4; //Using string because we have 3 outcomes?
+    int64 timeStamp = 3;
+    int64 status = 4; //Using string because we have 3 outcomes?
+}
+
+//Status 1 = "You´re bid has been successfully placed
+//Status 2 = "Failed to place bid. Must be higher than currentbid"
+//Status 3 = "Exception, auction is closed"
+
+message ResultRequest {
+    int64 timeStamp = 1;
 }
 
 message ResultResponse {
     string name = 1;
     int64 bid = 2;
-    int32 timeStamp = 3;
-    bool status = 4;
-}
-
-message ResultRequest {
-    int32 timeStamp = 1;
+    int64 timeStamp = 3;
+    bool Ongoing = 4;
 }
