@@ -28,6 +28,7 @@ message BidResponse {
 
 message ResultRequest {
     int64 timeStamp = 1;
+    string name = 2;
 }
 
 message ResultResponse {

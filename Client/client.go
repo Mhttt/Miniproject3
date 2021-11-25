@@ -25,7 +25,7 @@ func main() {
 	}
 }
 
-func connect(counter int16) {
+func connect(counter int64) {
 	conn, err := grpc.Dial(addresses[counter], grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		counter++

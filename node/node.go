@@ -6,6 +6,7 @@ import (
 	"miniproject3/gRPC"
 	"net"
 	"os"
+	"strconv"
 	"time"
 
 	"google.golang.org/grpc"
@@ -18,7 +19,6 @@ var Name string
 var HighestBid int64
 var HighestBidder string
 var Ongoing bool
-var duration chan (bool)
 
 type Node struct {
 	gRPC.UnimplementedAuctionServiceServer
@@ -27,14 +27,14 @@ type Node struct {
 func init() {
 	addresses = []string{":9000", ":9001", ":9002"}
 	Ongoing = true
-	duration = make(chan bool)
+
 }
 
 func main() {
 	go Listen(0)
 
 	for {
-		AuctionDuration(15) //Duration of the auction in seconds
+		AuctionDuration(600) //Duration of the auction in seconds
 		break
 	}
 }
@@ -57,13 +57,14 @@ func Listen(counter int) {
 			log.Fatalf("Failed to serve: %v", err)
 		}
 	}
-
 }
 
 func (n *Node) Bid(ctx context.Context, request *gRPC.BidRequest) (*gRPC.BidResponse, error) {
 
 	TimeStamp = CompareTimeStamp(request.TimeStamp)
 	TimeStamp++
+
+	log.Printf("-"+"%v is placing a bid of %d DKK "+LogTimestamp(), request.Name, request.Bid)
 
 	if Ongoing {
 		if request.Bid > HighestBid {
@@ -78,8 +79,11 @@ func (n *Node) Bid(ctx context.Context, request *gRPC.BidRequest) (*gRPC.BidResp
 }
 
 func (n *Node) Result(ctx context.Context, request *gRPC.ResultRequest) (*gRPC.ResultResponse, error) {
+
 	TimeStamp = CompareTimeStamp(request.TimeStamp)
 	TimeStamp++
+
+	log.Printf("-"+"%v has requested for the result"+LogTimestamp(), request.Name)
 
 	if Ongoing {
 		return &gRPC.ResultResponse{Name: Name, Bid: HighestBid, TimeStamp: TimeStamp, Ongoing: true}, nil
@@ -98,5 +102,12 @@ func CompareTimeStamp(requestTimetamp int64) int64 {
 
 func AuctionDuration(seconds time.Duration) {
 	time.Sleep(seconds * time.Second)
-	log.Print("The auction has ended!")
+	log.Println("**The auction has ended!**")
+	log.Printf("**%v is the winner of the auction with a highest bid of %d**", HighestBidder, HighestBid)
 }
+
+func LogTimestamp() string {
+	strTimestamp := strconv.FormatInt(TimeStamp, 10)
+	return " ~ [" + strTimestamp + "]"
+}
+
