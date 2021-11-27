@@ -31,7 +31,7 @@ func main() {
 
 func connect() {
 
-	address = addresses[rand.Intn(3)]
+	address = addresses[rand.Intn(3)] 
 	fmt.Printf("This is the random number: %d", number)
 	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {

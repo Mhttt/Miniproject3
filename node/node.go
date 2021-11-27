@@ -105,7 +105,6 @@ func Connect() {
 	}
 }
 
-
 func (n *Node) Bid(ctx context.Context, request *gRPC.BidRequest) (*gRPC.BidResponse, error) {
 
 	TimeStamp = CompareTimeStamp(request.TimeStamp)
@@ -116,7 +115,7 @@ func (n *Node) Bid(ctx context.Context, request *gRPC.BidRequest) (*gRPC.BidResp
 			HighestBid = request.Bid
 			HighestBidder = request.Name
 			log.Printf("-"+"%v is placing a bid of %d DKK "+LogTimestamp(), request.Name, request.Bid)
-			SendBidData(ctx, request)
+			SendBidData(ctx, request) // skal nok ikke ligge her?
 			return &gRPC.BidResponse{Name: Name, Bid: HighestBid, TimeStamp: TimeStamp, Status: 1}, nil
 		} else if HighestBid >= request.Bid {
 			return &gRPC.BidResponse{Name: Name, Bid: HighestBid, TimeStamp: TimeStamp, Status: 2}, nil
@@ -125,7 +124,7 @@ func (n *Node) Bid(ctx context.Context, request *gRPC.BidRequest) (*gRPC.BidResp
 	return &gRPC.BidResponse{Name: Name, Bid: HighestBid, TimeStamp: TimeStamp, Status: 3}, nil
 }
 
-//Sender bid videre til de andre nodes
+//Forwards the bid to the other notes
 func SendBidData(ctx context.Context, request *gRPC.BidRequest) {
 	WaitForOwnRequest.Add(1)
 	WaitForResponses := sync.WaitGroup{}
@@ -134,10 +133,13 @@ func SendBidData(ctx context.Context, request *gRPC.BidRequest) {
 		WaitForResponses.Add(1)
 		func() {
 			TimeStamp++
-			_, err := node.Bid(context.Background(), &gRPC.BidRequest{Name: request.Name, Bid: request.Bid, TimeStamp: request.TimeStamp})
+			response, err := node.Bid(context.Background(), &gRPC.BidRequest{Name: request.Name, Bid: request.Bid, TimeStamp: request.TimeStamp})
 			if err != nil {
 				log.Println(err)
 			}
+			TimeStamp = CompareTimeStamp(response.TimeStamp)
+			TimeStamp++
+			WaitForResponses.Done()
 		}()
 	}
 }
@@ -149,14 +151,16 @@ func (n *Node) Result(ctx context.Context, request *gRPC.ResultRequest) (*gRPC.R
 
 	log.Printf("-"+"%v has requested for the result"+LogTimestamp(), request.Name)
 
+	//Få SendResultData ind her uden at det kører for evigt
 	if Ongoing {
-		return &gRPC.ResultResponse{Name: Name, Bid: HighestBid, TimeStamp: TimeStamp, Ongoing: true}, nil
+		return &gRPC.ResultResponse{Name: HighestBidder, Bid: HighestBid, TimeStamp: TimeStamp, Ongoing: true}, nil
 	} else {
-		return &gRPC.ResultResponse{Name: Name, Bid: HighestBid, TimeStamp: TimeStamp, Ongoing: false}, nil
+		return &gRPC.ResultResponse{Name: HighestBidder, Bid: HighestBid, TimeStamp: TimeStamp, Ongoing: false}, nil
 	}
 }
 
-//fix me. Ved ikke hvordan dette skal laves
+//Den skal sende resultat videre til alle andre. Den med nyeste timestamp har det rigtige resultat?
+//Hvordan sætter jeg den her ind i bid uden den kører forevigt
 func SendResultData(ctx context.Context, request *gRPC.ResultRequest) {
 	WaitForOwnRequest.Add(1)
 	WaitForResponses := sync.WaitGroup{}
@@ -169,13 +173,17 @@ func SendResultData(ctx context.Context, request *gRPC.ResultRequest) {
 			if err != nil {
 				log.Println(err)
 			}
+			//Hvis den node har højere timestamp, opdaterer vi serverens data
 			if response.TimeStamp > TimeStamp {
-				//fix
+				TimeStamp = response.TimeStamp
+				HighestBid = response.Bid
+				HighestBidder = response.Name
 			}
+			WaitForResponses.Done()
 		}()
 	}
-}
 
+}
 func CompareTimeStamp(requestTimetamp int64) int64 {
 	if requestTimetamp > TimeStamp {
 		return requestTimetamp
@@ -197,6 +205,12 @@ func LogTimestamp() string {
 
 // Remove items from a slice
 func remove(s []string, i int) []string {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
+}
+
+//
+func removeNodes(s []gRPC.AuctionServiceClient, i int) []gRPC.AuctionServiceClient {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
 }
